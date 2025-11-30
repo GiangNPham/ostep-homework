@@ -8,22 +8,38 @@
 //
 
 typedef struct __rwlock_t {
+    int readingThreads;
+    sem_t lock; // to control readingThreads
+    sem_t writelock;
 } rwlock_t;
 
 
 void rwlock_init(rwlock_t *rw) {
+    sem_init(&rw->lock, 0, 1);
+    rw->readingThreads = 0;
+    sem_init(&rw->writelock, 0, 1);
 }
 
 void rwlock_acquire_readlock(rwlock_t *rw) {
+    sem_wait(&rw->lock);
+    rw->readingThreads++;
+    if (rw->readingThreads == 1) sem_wait(&rw->writelock);
+    sem_post(&rw->lock);
 }
 
 void rwlock_release_readlock(rwlock_t *rw) {
+    sem_wait(&rw->lock);
+    rw->readingThreads--;
+    if (rw->readingThreads == 0) sem_post(&rw->writelock);
+    sem_post(&rw->lock);
 }
 
 void rwlock_acquire_writelock(rwlock_t *rw) {
+    sem_wait(&rw->writelock);
 }
 
 void rwlock_release_writelock(rwlock_t *rw) {
+    sem_post(&rw->writelock);
 }
 
 //

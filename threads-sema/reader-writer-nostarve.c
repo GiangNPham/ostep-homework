@@ -8,22 +8,48 @@
 //
 
 typedef struct __rwlock_t {
+    int readingThreads;
+    sem_t lock;
+    sem_t turnstile;
+    sem_t writelock;
 } rwlock_t;
 
 
 void rwlock_init(rwlock_t *rw) {
+    rw->readingThreads = 0;
+    sem_init(&rw->lock, 0, 1);
+    sem_init(&rw->turnstile, 0, 1);
+    sem_init(&rw->writelock, 0, 1);
+
 }
 
 void rwlock_acquire_readlock(rwlock_t *rw) {
-}
+    sem_wait(&rw->turnstile); // check if any writer is waiting
+    sem_post(&rw->turnstile); // if not, free up the lock so next reader can come in
 
+    sem_wait(&rw->lock);
+    rw->readingThreads++;
+    if (rw->readingThreads == 1){
+        sem_wait(&rw->writelock);
+    }
+    sem_post(&rw->lock);
+}
+z
 void rwlock_release_readlock(rwlock_t *rw) {
+    sem_wait(&rw->lock);
+    rw->readingThreads--;
+    if (rw->readingThreads == 0) sem_post(&rw->writelock);
+    sem_post(&rw->lock);
 }
 
 void rwlock_acquire_writelock(rwlock_t *rw) {
+    sem_wait(&rw->turnstile);
+    sem_wait(&rw->writelock); // if there are exisiting readers => writer has to wait here for all reader release the lock
 }
 
 void rwlock_release_writelock(rwlock_t *rw) {
+    sem_post(&rw->writelock);
+    sem_post(&rw->turnstile);
 }
 
 //

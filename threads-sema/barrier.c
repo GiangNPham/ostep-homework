@@ -14,18 +14,52 @@
 
 typedef struct __barrier_t {
     // add semaphores and other information here
+    int threadsLeft;
+    sem_t binS; // for writing finishedThreads
+    sem_t s; // for locking and unlocking the barrier
 } barrier_t;
 
 
 // the single barrier we are using for this program
 barrier_t b;
-
+/*
 void barrier_init(barrier_t *b, int num_threads) {
     // initialization code goes here
-}
+    b->threadsLeft = num_threads;
+    sem_init(&b->binS, 0, 1);
+    sem_init(&b->s, 0, 0);
+}   
 
 void barrier(barrier_t *b) {
     // barrier code goes here
+    sem_wait(&b->binS);
+    b->threadsLeft--;
+    int x = b->threadsLeft;
+    sem_post(&b->binS);
+    if (x > 0) {
+        sem_wait(&b->s);
+    }
+    sem_post(&b->s); // might need to include another integer to stop the last post
+}
+*/
+
+void barrier_init(barrier_t *b, int num_threads) {
+    // initialization code goes here
+    b->threadsLeft = num_threads;
+    sem_init(&b->binS, 0, 1);
+    sem_init(&b->s, 0, 0);
+}   
+
+void barrier(barrier_t *b) {
+    // barrier code goes here
+    sem_wait(&b->binS);
+    b->threadsLeft--;
+    if (b->threadsLeft == 0){
+        sem_post(&b->s);
+    }
+    sem_post(&b->binS);
+    sem_wait(&b->s);
+    sem_post(&b->s); // also another redundant post
 }
 
 //
